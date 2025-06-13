@@ -14,9 +14,8 @@
             height: 100%;
             width: 100%;
             overflow: hidden;
-            /* Ẩn thanh cuộn */
             background-color: #000;
-            /* Nền đen cho trang */
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
         }
 
         #videoPlayerContainer {
@@ -25,6 +24,31 @@
             left: 0;
             width: 100%;
             height: 100%;
+        }
+
+        /* Kiểu cho thông báo lỗi */
+        #errorMessageContainer {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            background-color: rgba(30, 30, 30, 0.85);
+            padding: 25px;
+            border-radius: 12px;
+            font-size: 16px;
+            text-align: center;
+            display: none;
+            /* Ẩn theo mặc định */
+            max-width: 80%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #errorMessageContainer code {
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 14px;
         }
     </style>
     <!-- JW Player Library -->
@@ -38,53 +62,85 @@
 <body>
     <!-- Vùng chứa cho trình phát video -->
     <div id="videoPlayerContainer"></div>
+    <!-- Vùng chứa cho thông báo lỗi -->
+    <div id="errorMessageContainer"></div>
 
     <script type="text/javascript">
-        // Hàm để lấy URL video từ tham số truy vấn (query parameter) của trang web
-        function getVideoStreamUrl() {
-            // Tạo một đối tượng để dễ dàng làm việc với các tham số trên URL
-            const urlParams = new URLSearchParams(window.location.search);
-
-            // Kiểm tra xem có tham số 'url' trên URL không
-            if (urlParams.has('url')) {
-                // Lấy giá trị của tham số 'url' và giải mã nó
-                const videoUrl = urlParams.get('url');
-                return decodeURIComponent(videoUrl);
+        // Hàm để hiển thị lỗi một cách thân thiện
+        function displayError(message) {
+            const errorDiv = document.getElementById('errorMessageContainer');
+            const playerDiv = document.getElementById('videoPlayerContainer');
+            if (errorDiv) {
+                errorDiv.innerHTML = message;
+                errorDiv.style.display = 'block';
+                if (playerDiv) {
+                    playerDiv.style.display = 'none';
+                }
             }
-
-            // Trả về một video mặc định nếu không tìm thấy tham số 'url'
-            console.error("Không tìm thấy tham số 'url' trong đường dẫn. Sử dụng video mặc định.");
-            return 'https://vjs.zencdn.net/v/oceans.mp4';
         }
 
-        // Lấy URL video
-        const videoSource = getVideoStreamUrl();
-        // Lấy URL gốc của trang, không bao gồm tham số
-        const baseUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
-        const currentShareLink = baseUrl + '?url=' + encodeURIComponent(videoSource);
+        // Hàm để lấy URL video từ đường dẫn của trang web (path)
+        function getVideoStreamUrl() {
+            const path = window.location.pathname;
+            const embedPrefix = '/embed/';
+            const embedIndex = path.indexOf(embedPrefix);
 
-        // Cấu hình và khởi tạo JW Player
-        jwplayer("videoPlayerContainer").setup({
-            file: videoSource, // Sử dụng nguồn video đã được lấy từ URL
-            image: "https://images.pexels.com/photos/1001682/pexels-photo-1001682.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
-            title: 'Trình Phát Video',
-            description: 'Phát từ liên kết M3U8 hoặc MPD',
-            width: '100%',
-            height: '100%',
-            aspectratio: '16:9',
-            autostart: true, // Tự động phát video
-            captions: {
-                color: '#ffb800',
-                fontSize: 20,
-                backgroundOpacity: 0
-            },
-            sharing: {
-                // Tự động tạo link chia sẻ dựa trên URL hiện tại
-                code: encodeURI(`<iframe src='${currentShareLink}' width='640' height='360' frameborder='0' scrolling='no' allowfullscreen></iframe>`),
-                link: currentShareLink,
-                sites: ['facebook', 'twitter', 'email']
+            if (embedIndex !== -1) {
+                // Lấy tất cả mọi thứ sau '/embed/'
+                let videoUrl = path.substring(embedIndex + embedPrefix.length);
+
+                if (videoUrl) {
+                    // Tự động sửa lỗi URL phổ biến khi dán vào đường dẫn (ví dụ: https:/ bị biến thành https:/)
+                    if (videoUrl.startsWith('https:/') && !videoUrl.startsWith('https://')) {
+                        videoUrl = 'https://' + videoUrl.substring(7);
+                    } else if (videoUrl.startsWith('http:/') && !videoUrl.startsWith('http://')) {
+                        videoUrl = 'http://' + videoUrl.substring(6);
+                    }
+                    return decodeURIComponent(videoUrl);
+                }
             }
-        });
+            return null;
+        }
+
+        const videoSource = getVideoStreamUrl();
+
+        if (videoSource) {
+            const currentShareLink = window.location.href;
+
+            // Cấu hình và khởi tạo JW Player
+            jwplayer("videoPlayerContainer").setup({
+                file: videoSource,
+                image: "https://images.pexels.com/photos/1001682/pexels-photo-1001682.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+                title: 'Trình Phát Video',
+                description: 'Phát từ liên kết M3U8 hoặc MPD',
+                width: '100%',
+                height: '100%',
+                aspectratio: '16:9',
+                autostart: true,
+                sharing: {
+                    code: encodeURI(`<iframe src='${currentShareLink}' width='640' height='360' frameborder='0' scrolling='no' allowfullscreen></iframe>`),
+                    link: currentShareLink,
+                    sites: ['facebook', 'twitter', 'email']
+                },
+                events: {
+                    onSetupError: function (event) {
+                        displayError("Lỗi cấu hình trình phát.<br><br><code>" + event.message + "</code>");
+                    },
+                    onError: function (event) {
+                        let errorMessage = "Không thể phát video này.";
+                        if (event.code === 232011 || event.code === 204002) {
+                            errorMessage += "<br><br><b>Lý do:</b> Vấn đề về CORS hoặc kết nối mạng. Máy chủ video có thể đang chặn trang web này, hoặc liên kết không hợp lệ.";
+                        } else {
+                            errorMessage += "<br><br>Mã lỗi: <code>" + event.code + "</code>";
+                        }
+                        displayError(errorMessage);
+                    }
+                }
+            });
+        } else {
+            // Hiển thị lỗi nếu không có '/embed/' trên URL
+            displayError("Không tìm thấy liên kết video.<br><br>Vui lòng cung cấp liên kết theo định dạng: <br><code>.../embed/LINK_VIDEO_CUA_BAN</code>");
+        }
     </script>
 </body>
 
