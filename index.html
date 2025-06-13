@@ -90,7 +90,7 @@
                 let videoUrl = path.substring(embedIndex + embedPrefix.length);
 
                 if (videoUrl) {
-                    // Tự động sửa lỗi URL phổ biến khi dán vào đường dẫn (ví dụ: https:/ bị biến thành https:/)
+                    // Tự động sửa lỗi URL phổ biến khi dán vào đường dẫn (ví dụ: https:/ bị biến thành https://)
                     if (videoUrl.startsWith('https:/') && !videoUrl.startsWith('https://')) {
                         videoUrl = 'https://' + videoUrl.substring(7);
                     } else if (videoUrl.startsWith('http:/') && !videoUrl.startsWith('http://')) {
